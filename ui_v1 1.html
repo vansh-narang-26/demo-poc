@@ -1,0 +1,1893 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dynamic CAPEX - AI Assistant with Smart Forms & Documents</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Markdown support -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <!-- PDF.js for document viewing -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <!-- File download support -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+    <style>
+        .thinking-animation {
+            animation: pulse 2s infinite;
+        }
+        
+        .fade-in {
+            animation: fadeIn 0.5s ease-in;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .typewriter {
+            font-family: 'Courier New', monospace;
+            border-right: 2px solid #3b82f6;
+            animation: blink 1s infinite;
+        }
+        
+        @keyframes blink {
+            0%, 50% { border-color: #3b82f6; }
+            51%, 100% { border-color: transparent; }
+        }
+        
+        .scroll-smooth {
+            scroll-behavior: smooth;
+        }
+        
+        .progress-bar {
+            transition: width 0.3s ease-in-out;
+        }
+        
+        .form-field {
+            transition: all 0.3s ease-in-out;
+        }
+        
+        .stage-indicator {
+            transition: all 0.3s ease-in-out;
+        }
+        
+        .stage-indicator.active {
+            background-color: #3b82f6;
+            color: white;
+        }
+        
+        .stage-indicator.completed {
+            background-color: #10b981;
+            color: white;
+        }
+        
+        .field-group {
+            border-left: 4px solid #e5e7eb;
+            transition: border-color 0.3s ease;
+        }
+        
+        .field-group.active {
+            border-left-color: #3b82f6;
+        }
+        
+        .collection-progress {
+            background: linear-gradient(90deg, #3b82f6 var(--progress, 0%), #e5e7eb var(--progress, 0%));
+        }
+
+        /* Markdown styles */
+        .markdown-content {
+            line-height: 1.6;
+        }
+        
+        .markdown-content h1 {
+            font-size: 1.5rem;
+            font-weight: bold;
+            margin: 1rem 0;
+            color: #1f2937;
+        }
+        
+        .markdown-content h2 {
+            font-size: 1.25rem;
+            font-weight: bold;
+            margin: 0.8rem 0;
+            color: #374151;
+        }
+        
+        .markdown-content h3 {
+            font-size: 1.1rem;
+            font-weight: semibold;
+            margin: 0.6rem 0;
+            color: #4b5563;
+        }
+        
+        .markdown-content p {
+            margin: 0.5rem 0;
+            color: #6b7280;
+        }
+        
+        .markdown-content ul, .markdown-content ol {
+            margin: 0.5rem 0;
+            padding-left: 1.5rem;
+        }
+        
+        .markdown-content li {
+            margin: 0.2rem 0;
+            color: #6b7280;
+        }
+        
+        .markdown-content code {
+            background-color: #f3f4f6;
+            padding: 0.2rem 0.4rem;
+            border-radius: 0.25rem;
+            font-family: 'Courier New', monospace;
+            font-size: 0.875rem;
+        }
+        
+        .markdown-content pre {
+            background-color: #f3f4f6;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            overflow-x: auto;
+            margin: 1rem 0;
+        }
+        
+        .markdown-content blockquote {
+            border-left: 4px solid #d1d5db;
+            padding-left: 1rem;
+            margin: 1rem 0;
+            font-style: italic;
+            color: #6b7280;
+        }
+        
+        .markdown-content table {
+            border-collapse: collapse;
+            width: 100%;
+            margin: 1rem 0;
+        }
+        
+        .markdown-content th, .markdown-content td {
+            border: 1px solid #d1d5db;
+            padding: 0.5rem;
+            text-align: left;
+        }
+        
+        .markdown-content th {
+            background-color: #f9fafb;
+            font-weight: bold;
+        }
+
+        /* Document viewer styles */
+        .document-viewer {
+            max-height: 600px;
+            overflow-y: auto;
+        }
+        
+        .document-preview {
+            border: 2px dashed #d1d5db;
+            border-radius: 0.5rem;
+            padding: 2rem;
+            text-align: center;
+            background-color: #f9fafb;
+        }
+        
+        .document-download-btn {
+            transition: all 0.3s ease;
+        }
+        
+        .document-download-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        /* Enhanced chat message styles */
+        .message-content {
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+        }
+        
+        .document-attachment {
+            border: 1px solid #e5e7eb;
+            border-radius: 0.5rem;
+            padding: 1rem;
+            margin: 0.5rem 0;
+            background-color: #f8fafc;
+        }
+        
+        .document-attachment:hover {
+            background-color: #f1f5f9;
+            border-color: #3b82f6;
+        }
+
+        /* Modal styles */
+        .modal-overlay {
+            background-color: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(4px);
+        }
+        
+        .modal-content {
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        /* Quality level indicators */
+        .quality-basic {
+            background-color: #fef3c7;
+            color: #92400e;
+        }
+        
+        .quality-standard {
+            background-color: #dbeafe;
+            color: #1e40af;
+        }
+        
+        .quality-premium {
+            background-color: #f3e8ff;
+            color: #7c3aed;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <div class="container mx-auto px-4 py-8">
+        <!-- Header -->
+        <header class="text-center mb-8">
+            <h1 class="text-4xl font-bold text-gray-800 mb-2">Dynamic CAPEX Assistant</h1>
+            <p class="text-gray-600">AI-powered cost estimation with intelligent forms and document generation</p>
+            
+            <!-- Backend Configuration -->
+            <div class="max-w-2xl mx-auto mt-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                <div class="flex items-center justify-center space-x-4 mb-2">
+                    <label class="text-sm font-medium text-blue-800">Backend URL:</label>
+                    <input 
+                        type="text" 
+                        id="backendUrlInput" 
+                        class="px-3 py-1 text-sm border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        style="width: 300px;"
+                        placeholder="http://localhost:8080"
+                    >
+                    <button 
+                        id="updateBackendBtn" 
+                        class="px-3 py-1 text-sm bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors">
+                        Update
+                    </button>
+                </div>
+                <div class="flex justify-center space-x-2 mb-2">
+                    <button class="preset-url-btn px-2 py-1 text-xs bg-gray-200 hover:bg-gray-300 rounded" data-url="http://localhost:8080">
+                        Localhost:8080
+                    </button>
+                    <button class="preset-url-btn px-2 py-1 text-xs bg-gray-200 hover:bg-gray-300 rounded" data-url="http://192.168.1.100:8080">
+                        Local Network
+                    </button>
+                    <button class="preset-url-btn px-2 py-1 text-xs bg-gray-200 hover:bg-gray-300 rounded" data-url="https://your-domain.com">
+                        Production
+                    </button>
+                </div>
+                <div class="flex justify-center space-x-2 mb-2">
+                    <button id="testStreamBtn" class="px-3 py-1 text-xs bg-green-500 text-white hover:bg-green-600 rounded">
+                        Test SSE Stream
+                    </button>
+                    <button id="testDynamicBtn" class="px-3 py-1 text-xs bg-purple-500 text-white hover:bg-purple-600 rounded">
+                        Test Dynamic Collection
+                    </button>
+                    <button id="testCAPEXBtn" class="px-3 py-1 text-xs bg-orange-500 text-white hover:bg-orange-600 rounded">
+                        Demo Dynamic CAPEX
+                    </button>
+                </div>
+                <div class="text-xs text-blue-600">
+                    💡 Enhanced with dynamic field collection, document generation, and markdown support
+                </div>
+            </div>
+            
+            <div class="flex justify-center items-center mt-4 space-x-4">
+                <div id="connectionStatus" class="flex items-center">
+                    <div class="w-3 h-3 bg-gray-400 rounded-full mr-2"></div>
+                    <span class="text-sm text-gray-600">Disconnected</span>
+                </div>
+                <button id="testConnectionBtn" class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors">
+                    Test Connection
+                </button>
+            </div>
+        </header>
+
+        <!-- Collection Progress Indicator -->
+        <div id="collectionProgress" class="max-w-4xl mx-auto mb-6 hidden">
+            <div class="bg-white rounded-lg shadow-sm p-4 border">
+                <div class="flex items-center justify-between mb-2">
+                    <h3 class="text-sm font-medium text-gray-700">Collection Progress</h3>
+                    <span id="progressPercentage" class="text-sm text-blue-600 font-medium">0%</span>
+                </div>
+                <div class="w-full bg-gray-200 rounded-full h-2 mb-4">
+                    <div id="progressBar" class="bg-blue-600 h-2 rounded-full progress-bar" style="width: 0%"></div>
+                </div>
+                
+                <!-- Stage Indicators -->
+                <div class="flex justify-between items-center">
+                    <div id="stage-initial" class="stage-indicator flex items-center justify-center w-8 h-8 rounded-full bg-gray-200 text-xs font-medium">1</div>
+                    <div class="flex-1 h-1 bg-gray-200 mx-2"></div>
+                    <div id="stage-work-type" class="stage-indicator flex items-center justify-center w-8 h-8 rounded-full bg-gray-200 text-xs font-medium">2</div>
+                    <div class="flex-1 h-1 bg-gray-200 mx-2"></div>
+                    <div id="stage-details" class="stage-indicator flex items-center justify-center w-8 h-8 rounded-full bg-gray-200 text-xs font-medium">3</div>
+                    <div class="flex-1 h-1 bg-gray-200 mx-2"></div>
+                    <div id="stage-complete" class="stage-indicator flex items-center justify-center w-8 h-8 rounded-full bg-gray-200 text-xs font-medium">✓</div>
+                </div>
+                <div class="flex justify-between text-xs text-gray-500 mt-2">
+                    <span>Start</span>
+                    <span>Work Type</span>
+                    <span>Details</span>
+                    <span>Complete</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Dynamic Form Panel -->
+        <div id="dynamicFormPanel" class="max-w-4xl mx-auto mb-6 hidden">
+            <div class="bg-white rounded-lg shadow-lg overflow-hidden">
+                <div class="bg-gradient-to-r from-blue-500 to-purple-600 px-6 py-4">
+                    <h3 class="text-lg font-semibold text-white flex items-center">
+                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                        </svg>
+                        <span id="formTitle">Project Information</span>
+                    </h3>
+                    <p id="formDescription" class="text-blue-100 text-sm mt-1">Please provide the details for your CAPEX estimation</p>
+                </div>
+                
+                <div class="p-6">
+                    <form id="dynamicForm">
+                        <div id="formFields" class="space-y-6">
+                            <!-- Dynamic form fields will be inserted here -->
+                        </div>
+                        
+                        <div class="flex items-center justify-between mt-8 pt-6 border-t border-gray-200">
+                            <div class="flex items-center text-sm text-gray-500">
+                                <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                </svg>
+                                <span id="formHelp">Fill in the required fields to continue</span>
+                            </div>
+                            <div class="flex space-x-3">
+                                <button type="button" id="clearFormBtn" class="px-4 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
+                                    Clear
+                                </button>
+                                <button type="submit" id="submitFormBtn" class="px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors">
+                                    Continue
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Generated Documents Panel -->
+        <div id="documentsPanel" class="max-w-4xl mx-auto mb-6 hidden">
+            <div class="bg-white rounded-lg shadow-lg overflow-hidden">
+                <div class="bg-gradient-to-r from-green-500 to-blue-600 px-6 py-4">
+                    <h3 class="text-lg font-semibold text-white flex items-center">
+                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                        </svg>
+                        Generated Documents
+                    </h3>
+                    <p class="text-green-100 text-sm mt-1">Professional CAPEX analysis reports ready for download</p>
+                </div>
+                
+                <div id="documentsContent" class="p-6">
+                    <!-- Documents will be inserted here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Chat Interface -->
+        <div class="max-w-4xl mx-auto bg-white rounded-lg shadow-lg overflow-hidden">
+            <!-- Chat Messages -->
+            <div id="chatContainer" class="h-96 overflow-y-auto p-4 bg-gray-50 scroll-smooth">
+                <div class="text-center text-gray-500 py-8">
+                    <div class="mb-4">
+                        <svg class="w-16 h-16 mx-auto text-blue-500 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-3.582 8-8 8a8.955 8.955 0 01-4.126-.98L3 21l1.98-5.874A8.955 8.955 0 013 12a8 8 0 018-8c4.418 0 8 3.582 8 8z"></path>
+                        </svg>
+                    </div>
+                    <p class="text-lg font-medium mb-2">👋 Welcome to Dynamic CAPEX Assistant!</p>
+                    <p class="text-sm mb-4">I'll help you estimate CAPEX costs with intelligent forms and professional documents.</p>
+                    <div class="space-y-2 text-sm">
+                        <p>Try saying: <button class="text-blue-600 hover:underline" onclick="fillMessage('I need a CAPEX estimate for a new build project')">
+                            "I need a CAPEX estimate for a new build project"</button></p>
+                        <p>Or: <button class="text-blue-600 hover:underline" onclick="fillMessage('Help me estimate renovation costs')">
+                            "Help me estimate renovation costs"</button></p>
+                        <p>Or: <button class="text-blue-600 hover:underline" onclick="fillMessage('I want to fit out an office space')">
+                            "I want to fit out an office space"</button></p>
+                        <p>Quality levels: <button class="text-blue-600 hover:underline" onclick="fillMessage('Show me premium quality costs')">
+                            "Show me premium quality costs"</button></p>
+                    </div>
+                    <p class="text-xs mt-4 text-blue-600">✨ I'll guide you through smart forms and generate professional documents!</p>
+                </div>
+            </div>
+
+            <!-- Thinking Process Display -->
+            <div id="thinkingContainer" class="bg-blue-50 border-t border-blue-200 p-4 hidden">
+                <div class="flex items-center mb-2">
+                    <div class="w-4 h-4 bg-blue-500 rounded-full thinking-animation mr-2"></div>
+                    <span class="font-semibold text-blue-800">AI is thinking...</span>
+                </div>
+                <div id="thinkingContent" class="text-sm text-blue-700 font-mono bg-white p-3 rounded border max-h-32 overflow-y-auto">
+                    <!-- Real-time thinking process will appear here -->
+                </div>
+            </div>
+
+            <!-- Input Area -->
+            <div class="p-4 border-t bg-white">
+                <div class="flex space-x-2">
+                    <input 
+                        type="text" 
+                        id="messageInput" 
+                        placeholder="Ask about CAPEX estimation or describe your project..."
+                        class="flex-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        maxlength="500"
+                    >
+                    <button 
+                        id="sendBtn" 
+                        class="px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:bg-gray-400 transition-colors"
+                    >
+                        Send
+                    </button>
+                </div>
+                <div class="flex justify-between items-center mt-2 text-xs text-gray-500">
+                    <span id="charCount">0/500</span>
+                    <div class="flex items-center space-x-4">
+                        <label class="flex items-center">
+                            <input type="checkbox" id="streamingToggle" checked class="mr-1">
+                            Real-time streaming
+                        </label>
+                        <label class="flex items-center">
+                            <input type="checkbox" id="smartFormsToggle" checked class="mr-1">
+                            Smart forms
+                        </label>
+                        <label class="flex items-center">
+                            <input type="checkbox" id="markdownToggle" checked class="mr-1">
+                            Markdown rendering
+                        </label>
+                        <span>Thread: <span id="threadId" class="font-mono">thread_001</span></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Processing Steps -->
+        <div id="stepsContainer" class="max-w-4xl mx-auto mt-6 hidden">
+            <h3 class="text-lg font-semibold mb-4 text-gray-800">Processing Steps</h3>
+            <div class="space-y-2" id="stepsList">
+                <!-- Processing steps will appear here -->
+            </div>
+        </div>
+
+        <!-- Results Panel -->
+        <div id="resultsContainer" class="max-w-4xl mx-auto mt-6 hidden">
+            <div class="bg-white rounded-lg shadow-lg p-6">
+                <h3 class="text-lg font-semibold mb-4 text-gray-800">CAPEX Analysis Results</h3>
+                <div id="resultsContent">
+                    <!-- Results will appear here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Document Modal -->
+    <div id="documentModal" class="fixed inset-0 z-50 hidden modal-overlay">
+        <div class="flex items-center justify-center min-h-screen p-4">
+            <div class="bg-white rounded-lg shadow-xl max-w-4xl w-full modal-content">
+                <div class="flex items-center justify-between p-6 border-b">
+                    <h3 id="modalTitle" class="text-lg font-semibold text-gray-800">Document Viewer</h3>
+                    <button id="closeModalBtn" class="text-gray-400 hover:text-gray-600">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </button>
+                </div>
+                
+                <div id="modalContent" class="p-6 document-viewer">
+                    <!-- Document content will be inserted here -->
+                </div>
+                
+                <div class="flex items-center justify-between p-6 border-t bg-gray-50">
+                    <div id="modalDocInfo" class="text-sm text-gray-600">
+                        <!-- Document info will be shown here -->
+                    </div>
+                    <div class="flex space-x-3">
+                        <button id="modalDownloadBtn" class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors">
+                            Download
+                        </button>
+                        <button id="modalCloseBtn" class="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition-colors">
+                            Close
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Backend Configuration
+        const BACKEND_CONFIG = {
+            DEV_URL: 'http://localhost:8080',
+            PROD_URL: 'https://your-production-domain.com',
+            
+            get BASE_URL() {
+                if (window.location.hostname === 'localhost' || 
+                    window.location.hostname === '127.0.0.1' ||
+                    window.location.hostname.includes('192.168.')) {
+                    return this.DEV_URL;
+                }
+                return this.PROD_URL;
+            },
+            
+            ENDPOINTS: {
+                HEALTH: '/health',
+                CHAT: '/chat',
+                CHAT_STREAM: '/chat/stream', 
+                TEST_STREAM: '/stream/test',
+                TEST_DYNAMIC: '/stream/test-dynamic',
+                CAPEX_DEMO: '/stream/capex-demo-dynamic',
+                FORM_FIELDS: '/form-fields',
+                WORK_TYPES: '/work-types',
+                REQUIREMENTS: '/requirements'
+            }
+        };
+
+        class EnhancedCAPEXInterface {
+            constructor() {
+                this.eventSource = null;
+                this.isConnected = false;
+                this.currentThreadId = 'thread_' + Date.now();
+                this.userId = 'user_' + Math.random().toString(36).substr(2, 9);
+                this.backendUrl = BACKEND_CONFIG.BASE_URL;
+                
+                // Dynamic form state
+                this.currentWorkType = null;
+                this.collectionStage = 'initial';
+                this.formFieldValues = {};
+                this.completionPercentage = 0;
+                this.currentFormFields = [];
+                
+                // Document management
+                this.generatedDocuments = [];
+                this.currentDocument = null;
+                
+                console.log(`🔗 Backend URL: ${this.backendUrl}`);
+                
+                this.initializeEventListeners();
+                this.updateThreadId();
+                this.setupCharacterCounter();
+                this.initializeDynamicForms();
+                this.initializeDocumentModal();
+                this.configureMarkdown();
+            }
+
+            configureMarkdown() {
+                // Configure marked.js for safe markdown rendering
+                if (typeof marked !== 'undefined') {
+                    marked.setOptions({
+                        breaks: true,
+                        gfm: true,
+                        sanitize: false, // We'll handle sanitization manually if needed
+                        smartLists: true,
+                        smartypants: true
+                    });
+                }
+            }
+
+            renderMarkdown(content) {
+                if (typeof marked !== 'undefined' && document.getElementById('markdownToggle').checked) {
+                    try {
+                        return marked.parse(content);
+                    } catch (error) {
+                        console.warn('Markdown parsing failed:', error);
+                        return this.escapeHtml(content);
+                    }
+                }
+                return this.escapeHtml(content);
+            }
+
+            escapeHtml(text) {
+                const div = document.createElement('div');
+                div.textContent = text;
+                return div.innerHTML;
+            }
+
+            initializeEventListeners() {
+                const sendBtn = document.getElementById('sendBtn');
+                const messageInput = document.getElementById('messageInput');
+                const testConnectionBtn = document.getElementById('testConnectionBtn');
+                const updateBackendBtn = document.getElementById('updateBackendBtn');
+                const backendUrlInput = document.getElementById('backendUrlInput');
+                const testStreamBtn = document.getElementById('testStreamBtn');
+                const testDynamicBtn = document.getElementById('testDynamicBtn');
+                const testCAPEXBtn = document.getElementById('testCAPEXBtn');
+
+                sendBtn.addEventListener('click', () => this.sendMessage());
+                messageInput.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        this.sendMessage();
+                    }
+                });
+
+                testConnectionBtn.addEventListener('click', () => this.testConnection());
+                updateBackendBtn.addEventListener('click', () => this.updateBackendUrl());
+                testStreamBtn.addEventListener('click', () => this.testStreaming());
+                testDynamicBtn.addEventListener('click', () => this.testDynamicCollection());
+                testCAPEXBtn.addEventListener('click', () => this.testCAPEXDemo());
+                
+                // Initialize backend URL input
+                backendUrlInput.value = this.backendUrl;
+                backendUrlInput.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') {
+                        this.updateBackendUrl();
+                    }
+                });
+                
+                // Add preset URL button listeners
+                document.querySelectorAll('.preset-url-btn').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        const url = e.target.getAttribute('data-url');
+                        backendUrlInput.value = url;
+                        this.updateBackendUrl();
+                    });
+                });
+
+                // Dynamic form listeners
+                document.getElementById('dynamicForm').addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    this.submitForm();
+                });
+
+                document.getElementById('clearFormBtn').addEventListener('click', () => {
+                    this.clearForm();
+                });
+            }
+
+            initializeDocumentModal() {
+                const modal = document.getElementById('documentModal');
+                const closeBtn = document.getElementById('closeModalBtn');
+                const modalCloseBtn = document.getElementById('modalCloseBtn');
+                const downloadBtn = document.getElementById('modalDownloadBtn');
+
+                const closeModal = () => {
+                    modal.classList.add('hidden');
+                    this.currentDocument = null;
+                };
+
+                closeBtn.addEventListener('click', closeModal);
+                modalCloseBtn.addEventListener('click', closeModal);
+
+                // Close modal when clicking outside
+                modal.addEventListener('click', (e) => {
+                    if (e.target === modal) {
+                        closeModal();
+                    }
+                });
+
+                downloadBtn.addEventListener('click', () => {
+                    if (this.currentDocument) {
+                        this.downloadDocument(this.currentDocument);
+                    }
+                });
+
+                // ESC key to close modal
+                document.addEventListener('keydown', (e) => {
+                    if (e.key === 'Escape' && !modal.classList.contains('hidden')) {
+                        closeModal();
+                    }
+                });
+            }
+
+            initializeDynamicForms() {
+                // Initially hide dynamic form panel
+                document.getElementById('dynamicFormPanel').classList.add('hidden');
+                document.getElementById('collectionProgress').classList.add('hidden');
+                document.getElementById('documentsPanel').classList.add('hidden');
+            }
+
+            setupCharacterCounter() {
+                const messageInput = document.getElementById('messageInput');
+                const charCount = document.getElementById('charCount');
+                
+                messageInput.addEventListener('input', () => {
+                    const length = messageInput.value.length;
+                    charCount.textContent = `${length}/500`;
+                    charCount.className = length > 450 ? 'text-red-500' : 'text-gray-500';
+                });
+            }
+
+            async testConnection() {
+                try {
+                    const response = await fetch(`${this.backendUrl}${BACKEND_CONFIG.ENDPOINTS.HEALTH}`);
+                    if (response.ok) {
+                        const health = await response.json();
+                        this.updateConnectionStatus(true, 'Connected');
+                        this.addSystemMessage(`✅ Connected to Enhanced CAPEX system v${health.version} at ${this.backendUrl}`);
+                        if (health.dynamic_fields_status === 'healthy') {
+                            this.addSystemMessage('🎯 Dynamic field collection available');
+                        }
+                        if (health.streaming_status === 'healthy') {
+                            this.addSystemMessage('🌊 Real-time streaming available');
+                        }
+                        if (health.form_generation_status === 'healthy') {
+                            this.addSystemMessage('📋 Smart form generation available');
+                        }
+                    } else {
+                        throw new Error('Health check failed');
+                    }
+                } catch (error) {
+                    this.updateConnectionStatus(false, 'Connection failed');
+                    this.addSystemMessage(`❌ Connection test failed: ${error.message}`);
+                    this.addSystemMessage(`🔗 Trying to connect to: ${this.backendUrl}`);
+                }
+            }
+
+            async testDynamicCollection() {
+                this.addSystemMessage("🧪 Testing dynamic field collection...");
+                this.closeStream();
+                
+                const testUrl = `${this.backendUrl}/stream/test-dynamic`;
+                console.log(`Testing dynamic stream: ${testUrl}`);
+                
+                this.eventSource = new EventSource(testUrl);
+                
+                this.eventSource.addEventListener('dynamic_test', (event) => {
+                    const data = JSON.parse(event.data);
+                    this.addSystemMessage(`🎯 Dynamic test ${data.count}: ${data.message}`);
+                    
+                    // Show dynamic form fields in test
+                    if (data.suggested_form_fields && data.suggested_form_fields.length > 0) {
+                        this.updateCollectionProgress(data.collection_stage, (data.count + 1) * 33);
+                        this.showDynamicForm(data.suggested_form_fields, data.collection_stage);
+                    }
+                });
+                
+                this.eventSource.addEventListener('end', (event) => {
+                    const data = JSON.parse(event.data);
+                    this.addSystemMessage(`✅ Dynamic collection test completed: ${data.status}`);
+                    this.closeStream();
+                });
+                
+                this.eventSource.onerror = (error) => {
+                    this.addSystemMessage(`❌ Dynamic test failed: ${error.message || 'Connection error'}`);
+                    this.closeStream();
+                };
+            }
+
+            async testCAPEXDemo() {
+                this.addSystemMessage("🎬 Starting enhanced CAPEX demo...");
+                this.closeStream();
+                
+                // Clear previous results
+                this.hideDynamicForm();
+                this.hideCollectionProgress();
+                this.hideDocumentsPanel();
+                document.getElementById('stepsContainer').classList.add('hidden');
+                document.getElementById('resultsContainer').classList.add('hidden');
+                document.getElementById('stepsList').innerHTML = '';
+                this.hideThinking();
+                
+                const demoUrl = `${this.backendUrl}/stream/capex-demo-dynamic`;
+                console.log(`Demo stream: ${demoUrl}`);
+                
+                this.eventSource = new EventSource(demoUrl);
+                
+                this.eventSource.onmessage = (event) => {
+                    try {
+                        const data = JSON.parse(event.data);
+                        this.handleStreamEvent(event.type || 'message', data);
+                    } catch (error) {
+                        console.error('Error parsing demo data:', error);
+                    }
+                };
+                
+                // Handle all the event types
+                ['start', 'progress', 'thinking', 'result', 'end', 'form'].forEach(eventType => {
+                    this.eventSource.addEventListener(eventType, (event) => {
+                        const data = JSON.parse(event.data);
+                        this.handleStreamEvent(eventType, data);
+                        
+                        if (eventType === 'end') {
+                            this.addSystemMessage(`✅ Enhanced CAPEX demo completed!`);
+                            this.closeStream();
+                        }
+                    });
+                });
+                
+                this.eventSource.onerror = (error) => {
+                    this.addSystemMessage(`❌ Demo failed: ${error.message || 'Connection error'}`);
+                    this.closeStream();
+                };
+            }
+
+            updateBackendUrl() {
+                const backendUrlInput = document.getElementById('backendUrlInput');
+                let newUrl = backendUrlInput.value.trim();
+                
+                if (!newUrl) {
+                    this.addSystemMessage('❌ Please enter a valid backend URL');
+                    return;
+                }
+                
+                if (!newUrl.startsWith('http://') && !newUrl.startsWith('https://')) {
+                    newUrl = 'http://' + newUrl;
+                }
+                
+                newUrl = newUrl.replace(/\/$/, '');
+                
+                this.backendUrl = newUrl;
+                backendUrlInput.value = newUrl;
+                
+                console.log(`🔄 Backend URL updated to: ${this.backendUrl}`);
+                this.addSystemMessage(`🔄 Backend URL updated to: ${this.backendUrl}`);
+                
+                this.closeStream();
+                this.updateConnectionStatus(false, 'URL changed - test connection');
+            }
+
+            updateThreadId() {
+                document.getElementById('threadId').textContent = this.currentThreadId;
+            }
+
+            updateConnectionStatus(connected, message = '') {
+                const statusElement = document.getElementById('connectionStatus');
+                const dot = statusElement.querySelector('div');
+                const text = statusElement.querySelector('span');
+
+                if (connected) {
+                    dot.className = 'w-3 h-3 bg-green-500 rounded-full mr-2';
+                    text.textContent = 'Connected';
+                    text.className = 'text-sm text-green-600';
+                } else {
+                    dot.className = 'w-3 h-3 bg-red-500 rounded-full mr-2';
+                    text.textContent = message || 'Disconnected';
+                    text.className = 'text-sm text-red-600';
+                }
+                this.isConnected = connected;
+            }
+
+            // Collection Progress Management
+            updateCollectionProgress(stage, percentage) {
+                const progressContainer = document.getElementById('collectionProgress');
+                const progressBar = document.getElementById('progressBar');
+                const progressPercentage = document.getElementById('progressPercentage');
+                
+                progressContainer.classList.remove('hidden');
+                progressBar.style.width = `${percentage}%`;
+                progressPercentage.textContent = `${Math.round(percentage)}%`;
+                
+                this.completionPercentage = percentage;
+                this.collectionStage = stage;
+                
+                // Update stage indicators
+                const stages = ['initial', 'work-type', 'details', 'complete'];
+                const currentIndex = stages.indexOf(stage);
+                
+                stages.forEach((stageName, index) => {
+                    const indicator = document.getElementById(`stage-${stageName}`);
+                    if (indicator) {
+                        indicator.classList.remove('active', 'completed');
+                        if (index < currentIndex) {
+                            indicator.classList.add('completed');
+                        } else if (index === currentIndex) {
+                            indicator.classList.add('active');
+                        }
+                    }
+                });
+            }
+
+            hideCollectionProgress() {
+                document.getElementById('collectionProgress').classList.add('hidden');
+            }
+
+            // Document Management
+            showDocumentsPanel() {
+                document.getElementById('documentsPanel').classList.remove('hidden');
+            }
+
+            hideDocumentsPanel() {
+                document.getElementById('documentsPanel').classList.add('hidden');
+            }
+
+            addGeneratedDocument(documentData) {
+                this.generatedDocuments.push(documentData);
+                this.updateDocumentsPanel();
+                this.showDocumentsPanel();
+            }
+
+            updateDocumentsPanel() {
+                const documentsContent = document.getElementById('documentsContent');
+                
+                if (this.generatedDocuments.length === 0) {
+                    documentsContent.innerHTML = '<p class="text-gray-500 text-center">No documents generated yet.</p>';
+                    return;
+                }
+                
+                documentsContent.innerHTML = this.generatedDocuments.map((doc, index) => {
+                    const qualityClass = doc.quality_level ? 
+                        `quality-${doc.quality_level.toLowerCase()}` : 'bg-gray-100';
+                    
+                    return `
+                        <div class="document-attachment mb-4 last:mb-0" data-doc-index="${index}">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center flex-1">
+                                    <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mr-4">
+                                        <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                                        </svg>
+                                    </div>
+                                    <div class="flex-1">
+                                        <h4 class="font-semibold text-gray-800">${doc.filename}</h4>
+                                        <p class="text-sm text-gray-600">${doc.document_type || 'CAPEX Report'}</p>
+                                        <div class="flex items-center space-x-2 mt-1">
+                                            <span class="text-xs text-gray-500">${this.formatFileSize(doc.size)}</span>
+                                            ${doc.quality_level ? `<span class="text-xs px-2 py-1 rounded ${qualityClass}">${doc.quality_level}</span>` : ''}
+                                            <span class="text-xs text-gray-500">${this.formatDate(doc.generated_at)}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="flex space-x-2">
+                                    <button onclick="dynamicCAPEX.viewDocument(${index})" class="px-3 py-2 bg-blue-500 text-white text-sm rounded hover:bg-blue-600 transition-colors">
+                                        View
+                                    </button>
+                                    <button onclick="dynamicCAPEX.downloadDocument(${index})" class="px-3 py-2 bg-green-500 text-white text-sm rounded hover:bg-green-600 transition-colors document-download-btn">
+                                        Download
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            }
+
+            viewDocument(index) {
+                const doc = this.generatedDocuments[index];
+                if (!doc) return;
+                
+                this.currentDocument = doc;
+                const modal = document.getElementById('documentModal');
+                const modalTitle = document.getElementById('modalTitle');
+                const modalContent = document.getElementById('modalContent');
+                const modalDocInfo = document.getElementById('modalDocInfo');
+                
+                modalTitle.textContent = doc.filename;
+                modalDocInfo.innerHTML = `
+                    <div class="text-sm">
+                        <span class="font-medium">Type:</span> ${doc.document_type || 'CAPEX Report'} | 
+                        <span class="font-medium">Size:</span> ${this.formatFileSize(doc.size)} | 
+                        <span class="font-medium">Generated:</span> ${this.formatDate(doc.generated_at)}
+                        ${doc.quality_level ? ` | <span class="font-medium">Quality:</span> ${doc.quality_level}` : ''}
+                    </div>
+                `;
+                
+                // For now, show document metadata since we can't directly view DOCX in browser
+                modalContent.innerHTML = this.generateDocumentPreview(doc);
+                
+                modal.classList.remove('hidden');
+            }
+
+            generateDocumentPreview(doc) {
+                return `
+                    <div class="document-preview">
+                        <div class="mb-6">
+                            <svg class="w-16 h-16 mx-auto text-blue-500 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                            </svg>
+                            <h3 class="text-lg font-semibold text-gray-800 mb-2">${doc.filename}</h3>
+                            <p class="text-gray-600 mb-4">Professional CAPEX Analysis Report</p>
+                        </div>
+                        
+                        <div class="bg-blue-50 p-4 rounded-lg mb-4">
+                            <h4 class="font-semibold text-blue-800 mb-2">📋 Document Details</h4>
+                            <div class="grid md:grid-cols-2 gap-4 text-sm">
+                                <div><strong>Document Type:</strong> ${doc.document_type || 'CAPEX Report'}</div>
+                                <div><strong>File Size:</strong> ${this.formatFileSize(doc.size)}</div>
+                                <div><strong>MIME Type:</strong> ${doc.mime_type}</div>
+                                <div><strong>Generated:</strong> ${this.formatDate(doc.generated_at)}</div>
+                                ${doc.quality_level ? `<div><strong>Quality Level:</strong> ${doc.quality_level}</div>` : ''}
+                            </div>
+                        </div>
+                        
+                        <div class="bg-green-50 p-4 rounded-lg mb-4">
+                            <h4 class="font-semibold text-green-800 mb-2">📄 Content Preview</h4>
+                            <p class="text-sm text-green-700">
+                                This document contains a comprehensive CAPEX analysis including:
+                            </p>
+                            <ul class="list-disc list-inside text-sm text-green-700 mt-2 space-y-1">
+                                <li>Executive summary with key figures</li>
+                                <li>Detailed component breakdown</li>
+                                <li>Quality level specifications</li>
+                                <li>Timeline and implementation phases</li>
+                                <li>Risk factors and recommendations</li>
+                                <li>Professional formatting with charts and tables</li>
+                            </ul>
+                        </div>
+                        
+                        <div class="text-center">
+                            <p class="text-sm text-gray-600 mb-4">
+                                To view the complete document with all formatting, charts, and detailed analysis, 
+                                please download the file.
+                            </p>
+                            <button onclick="dynamicCAPEX.downloadDocument(dynamicCAPEX.currentDocument)" 
+                                    class="px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors">
+                                📥 Download Complete Document
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }
+
+            downloadDocument(docOrIndex) {
+                let doc;
+                if (typeof docOrIndex === 'number') {
+                    doc = this.generatedDocuments[docOrIndex];
+                } else {
+                    doc = docOrIndex;
+                }
+                
+                if (!doc || !doc.content) {
+                    this.addSystemMessage('❌ Document not available for download');
+                    return;
+                }
+                
+                try {
+                    // Decode base64 content
+                    const binaryString = atob(doc.content);
+                    const bytes = new Uint8Array(binaryString.length);
+                    for (let i = 0; i < binaryString.length; i++) {
+                        bytes[i] = binaryString.charCodeAt(i);
+                    }
+                    
+                    // Create blob and download
+                    const blob = new Blob([bytes], { type: doc.mime_type || 'application/octet-stream' });
+                    
+                    if (typeof saveAs !== 'undefined') {
+                        // Use FileSaver.js if available
+                        saveAs(blob, doc.filename);
+                    } else {
+                        // Fallback download method
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = doc.filename;
+                        document.body.appendChild(a);
+                        a.click();
+                        document.body.removeChild(a);
+                        URL.revokeObjectURL(url);
+                    }
+                    
+                    this.addSystemMessage(`📥 Downloaded: ${doc.filename}`);
+                } catch (error) {
+                    console.error('Download failed:', error);
+                    this.addSystemMessage(`❌ Download failed: ${error.message}`);
+                }
+            }
+
+            formatFileSize(bytes) {
+                if (bytes === 0) return '0 Bytes';
+                const k = 1024;
+                const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+                const i = Math.floor(Math.log(bytes) / Math.log(k));
+                return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+            }
+
+            formatDate(dateString) {
+                try {
+                    const date = new Date(dateString);
+                    return date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
+                } catch (error) {
+                    return dateString;
+                }
+            }
+
+            // Dynamic Form Management (enhanced)
+            async showDynamicForm(formFields, stage = 'details', workType = null) {
+                const formPanel = document.getElementById('dynamicFormPanel');
+                const formFieldsContainer = document.getElementById('formFields');
+                const formTitle = document.getElementById('formTitle');
+                const formDescription = document.getElementById('formDescription');
+                
+                // Update form context
+                this.currentFormFields = formFields;
+                this.collectionStage = stage;
+                if (workType) this.currentWorkType = workType;
+                
+                // Set title and description based on stage
+                const titles = {
+                    'initial': 'Project Location & Type',
+                    'work_type_selected': 'Project Details',
+                    'details': 'Detailed Requirements',
+                    'complete': 'Review Information'
+                };
+                
+                const descriptions = {
+                    'initial': 'Tell us about your project location and what type of work you need',
+                    'work_type_selected': 'Now let\'s gather the specific details for your project',
+                    'details': 'Please provide additional details for accurate cost estimation',
+                    'complete': 'Review and confirm your project information'
+                };
+                
+                formTitle.textContent = titles[stage] || 'Project Information';
+                formDescription.textContent = descriptions[stage] || 'Please provide the required information';
+                
+                // Clear existing fields
+                formFieldsContainer.innerHTML = '';
+                
+                // Generate form fields
+                formFields.forEach(field => {
+                    const fieldElement = this.createFormField(field);
+                    formFieldsContainer.appendChild(fieldElement);
+                });
+                
+                // Show the form
+                formPanel.classList.remove('hidden');
+                
+                // Scroll to form
+                formPanel.scrollIntoView({ behavior: 'smooth' });
+            }
+
+            createFormField(fieldConfig) {
+                const fieldDiv = document.createElement('div');
+                fieldDiv.className = 'form-field field-group bg-gray-50 p-4 rounded-lg';
+                
+                const label = document.createElement('label');
+                label.className = 'block text-sm font-medium text-gray-700 mb-2';
+                label.textContent = fieldConfig.label;
+                if (fieldConfig.required) {
+                    label.innerHTML += ' <span class="text-red-500">*</span>';
+                }
+                
+                let inputElement;
+                
+                switch (fieldConfig.field_type || fieldConfig.type) {
+                    case 'select':
+                        inputElement = document.createElement('select');
+                        inputElement.className = 'w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500';
+                        
+                        // Add placeholder option
+                        const placeholderOption = document.createElement('option');
+                        placeholderOption.value = '';
+                        placeholderOption.textContent = `Select ${fieldConfig.label}`;
+                        placeholderOption.disabled = true;
+                        placeholderOption.selected = true;
+                        inputElement.appendChild(placeholderOption);
+                        
+                        // Add options
+                        if (fieldConfig.options) {
+                            fieldConfig.options.forEach(option => {
+                                const optionElement = document.createElement('option');
+                                optionElement.value = option.value;
+                                optionElement.textContent = option.label;
+                                inputElement.appendChild(optionElement);
+                            });
+                        }
+                        break;
+                        
+                    case 'number':
+                        inputElement = document.createElement('input');
+                        inputElement.type = 'number';
+                        inputElement.className = 'w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500';
+                        if (fieldConfig.placeholder) {
+                            inputElement.placeholder = fieldConfig.placeholder;
+                        }
+                        if (fieldConfig.validation) {
+                            if (fieldConfig.validation.min !== undefined) {
+                                inputElement.min = fieldConfig.validation.min;
+                            }
+                            if (fieldConfig.validation.max !== undefined) {
+                                inputElement.max = fieldConfig.validation.max;
+                            }
+                        }
+                        break;
+                        
+                    case 'text':
+                    default:
+                        inputElement = document.createElement('input');
+                        inputElement.type = 'text';
+                        inputElement.className = 'w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500';
+                        if (fieldConfig.placeholder) {
+                            inputElement.placeholder = fieldConfig.placeholder;
+                        }
+                        break;
+                }
+                
+                inputElement.name = fieldConfig.name;
+                inputElement.required = fieldConfig.required || false;
+                
+                // Set existing value if available
+                if (this.formFieldValues[fieldConfig.name]) {
+                    inputElement.value = this.formFieldValues[fieldConfig.name];
+                }
+                
+                // Add change listener to update form values
+                inputElement.addEventListener('change', (e) => {
+                    this.formFieldValues[fieldConfig.name] = e.target.value;
+                    this.validateForm();
+                    
+                    // Handle work type selection specially
+                    if (fieldConfig.name === 'type_of_work' && e.target.value) {
+                        this.currentWorkType = e.target.value;
+                        this.updateCollectionProgress('work_type_selected', 30);
+                        // Could potentially load additional fields here
+                    }
+                });
+                
+                fieldDiv.appendChild(label);
+                fieldDiv.appendChild(inputElement);
+                
+                // Add help text if available
+                if (fieldConfig.help_text) {
+                    const helpText = document.createElement('p');
+                    helpText.className = 'mt-1 text-xs text-gray-500';
+                    helpText.textContent = fieldConfig.help_text;
+                    fieldDiv.appendChild(helpText);
+                }
+                
+                return fieldDiv;
+            }
+
+            validateForm() {
+                const form = document.getElementById('dynamicForm');
+                const submitBtn = document.getElementById('submitFormBtn');
+                const formHelp = document.getElementById('formHelp');
+                
+                const formData = new FormData(form);
+                const requiredFields = this.currentFormFields.filter(field => field.required);
+                const missingRequired = requiredFields.filter(field => !formData.get(field.name));
+                
+                if (missingRequired.length > 0) {
+                    submitBtn.disabled = true;
+                    formHelp.textContent = `Please complete ${missingRequired.length} required field(s)`;
+                } else {
+                    submitBtn.disabled = false;
+                    formHelp.textContent = 'Ready to continue';
+                }
+            }
+
+            async submitForm() {
+                const form = document.getElementById('dynamicForm');
+                const formData = new FormData(form);
+                
+                // Convert FormData to object
+                const fieldValues = {};
+                for (let [key, value] of formData.entries()) {
+                    fieldValues[key] = value;
+                }
+                
+                // Update internal state
+                Object.assign(this.formFieldValues, fieldValues);
+                
+                // Create message based on form values
+                let message = "I've provided the following project details: ";
+                const details = [];
+                
+                for (let [key, value] of Object.entries(fieldValues)) {
+                    if (value) {
+                        details.push(`${key}: ${value}`);
+                    }
+                }
+                
+                message += details.join(', ');
+                
+                // Hide form
+                this.hideDynamicForm();
+                
+                // Send message with field values
+                await this.sendMessageWithFormData(message, fieldValues);
+            }
+
+            clearForm() {
+                const form = document.getElementById('dynamicForm');
+                form.reset();
+                this.formFieldValues = {};
+                this.validateForm();
+            }
+
+            hideDynamicForm() {
+                document.getElementById('dynamicFormPanel').classList.add('hidden');
+            }
+
+            // Enhanced message sending with form data
+            async sendMessageWithFormData(message, fieldValues = null) {
+                const sendBtn = document.getElementById('sendBtn');
+                const messageInput = document.getElementById('messageInput');
+                const streamingEnabled = document.getElementById('streamingToggle').checked;
+                
+                if (!message && !messageInput.value.trim()) return;
+                
+                const finalMessage = message || messageInput.value.trim();
+                
+                // Disable input
+                sendBtn.disabled = true;
+                messageInput.disabled = true;
+                
+                // Add user message with markdown support
+                this.addMessage('user', finalMessage, new Date().toISOString());
+                
+                // Clear input
+                messageInput.value = '';
+                document.getElementById('charCount').textContent = '0/500';
+                
+                // Clear previous results
+                document.getElementById('stepsContainer').classList.add('hidden');
+                document.getElementById('resultsContainer').classList.add('hidden');
+                document.getElementById('stepsList').innerHTML = '';
+                this.hideThinking();
+
+                try {
+                    if (streamingEnabled) {
+                        await this.sendStreamingMessage(finalMessage, fieldValues);
+                    } else {
+                        await this.sendRegularMessage(finalMessage, fieldValues);
+                    }
+                } catch (error) {
+                    this.addMessage('system', `❌ Error: ${error.message}`, new Date().toISOString());
+                } finally {
+                    // Re-enable input
+                    sendBtn.disabled = false;
+                    messageInput.disabled = false;
+                    messageInput.focus();
+                }
+            }
+
+            async sendMessage() {
+                await this.sendMessageWithFormData();
+            }
+
+            async sendStreamingMessage(message, fieldValues = null) {
+                this.closeStream();
+                
+                try {
+                    // Construct URL with parameters
+                    const params = new URLSearchParams({
+                        message: message,
+                        user_id: this.userId,
+                        thread_id: this.currentThreadId
+                    });
+                    
+                    if (fieldValues) {
+                        params.append('field_values', JSON.stringify(fieldValues));
+                        params.append('form_submitted', 'true');
+                    }
+                    
+                    if (this.collectionStage) {
+                        params.append('collection_stage', this.collectionStage);
+                    }
+                    
+                    const streamUrl = `${this.backendUrl}${BACKEND_CONFIG.ENDPOINTS.CHAT_STREAM}?${params}`;
+                    
+                    console.log(`🌊 Connecting to enhanced stream: ${streamUrl}`);
+                    this.eventSource = new EventSource(streamUrl);
+                    
+                    this.updateConnectionStatus(true, 'Streaming...');
+                    
+                    this.eventSource.onopen = (event) => {
+                        console.log('🟢 EventSource connection opened');
+                        this.updateConnectionStatus(true, 'Streaming...');
+                    };
+
+                    this.eventSource.onmessage = (event) => {
+                        try {
+                            const data = JSON.parse(event.data);
+                            console.log('🔴 SSE onmessage:', event.type, data);
+                            this.handleStreamEvent('message', data);
+                        } catch (error) {
+                            console.error('Error parsing SSE data:', error, 'Raw data:', event.data);
+                        }
+                    };
+
+                    // Handle specific event types including new 'form' event
+                    ['start', 'progress', 'thinking', 'result', 'end', 'heartbeat', 'error', 'form'].forEach(eventType => {
+                        this.eventSource.addEventListener(eventType, (event) => {
+                            try {
+                                const data = JSON.parse(event.data);
+                                console.log(`🎯 SSE ${eventType}:`, data);
+                                this.handleStreamEvent(eventType, data);
+                            } catch (error) {
+                                console.error(`Error parsing ${eventType} event:`, error);
+                            }
+                        });
+                    });
+
+                    this.eventSource.onerror = (error) => {
+                        console.error('EventSource failed:', error);
+                        this.hideThinking();
+                        this.updateConnectionStatus(false, 'Connection lost');
+                        this.addMessage('system', '❌ Connection lost. Please try again.', new Date().toISOString());
+                        this.closeStream();
+                    };
+
+                } catch (error) {
+                    throw new Error(`Enhanced streaming failed: ${error.message}`);
+                }
+            }
+
+            handleStreamEvent(eventType, data) {
+                console.log(`🎯 Handling enhanced event: ${eventType}`, data);
+                
+                switch(eventType) {
+                    case 'start':
+                        this.addProcessingStep('Initialization', 'running', data.message || 'Starting analysis...');
+                        this.addSystemMessage(`🚀 ${data.message || 'Analysis started'}`);
+                        break;
+                        
+                    case 'progress':
+                        this.addProcessingStep(data.step || 'Progress', 'running', data.message || 'Processing...');
+                        
+                        // Handle dynamic collection progress
+                        if (data.collection_stage) {
+                            this.collectionStage = data.collection_stage;
+                        }
+                        break;
+                        
+                    case 'thinking':
+                        this.showThinking(data.step || 'AI', data.message || data.token || '');
+                        break;
+                        
+                    case 'llm_start':
+                        this.addProcessingStep(data.step || 'LLM', 'running', data.message || 'AI is thinking...');
+                        break;
+                        
+                    case 'llm_end':
+                        this.addProcessingStep(data.step || 'LLM', 'completed', data.message || 'Reasoning completed');
+                        break;
+                        
+                    case 'tool_start':
+                        this.addProcessingStep(data.tool || 'Tool', 'running', data.message || 'Using tool...');
+                        break;
+                        
+                    case 'tool_end':
+                        this.addProcessingStep(data.tool || 'Tool', 'completed', data.message || 'Tool completed');
+                        break;
+
+                    case 'form':
+                        // Handle form field generation event
+                        if (data.data && data.data.fields) {
+                            this.addSystemMessage('📋 Smart form generated - please fill in the details below');
+                            this.showDynamicForm(data.data.fields, this.collectionStage);
+                        }
+                        break;
+                        
+                    case 'result':
+                        this.hideThinking();
+                        
+                        // Handle response with markdown support
+                        const response = data.response || 'Analysis completed';
+                        this.addMessage('assistant', response, new Date().toISOString());
+                        
+                        // Handle dynamic form fields in response
+                        if (data.suggested_form_fields && data.suggested_form_fields.length > 0) {
+                            this.showDynamicForm(data.suggested_form_fields, data.collection_stage);
+                        }
+                        
+                        // Handle document attachments
+                        if (data.cost_estimate && data.cost_estimate.document_attachment) {
+                            this.handleDocumentAttachment(data.cost_estimate.document_attachment, data.cost_estimate);
+                        }
+                        
+                        // Handle collection progress
+                        if (data.collection_stage) {
+                            const progressMap = {
+                                'initial': 0,
+                                'work_type_selection': 25,
+                                'details_collection': 50,
+                                'complete': 100
+                            };
+                            const progress = progressMap[data.collection_stage] || 0;
+                            this.updateCollectionProgress(data.collection_stage, progress);
+                        }
+                        
+                        this.showResults(data);
+                        this.addProcessingStep('Final Result', 'completed', 'Analysis completed successfully');
+                        break;
+                        
+                    case 'error':
+                        this.hideThinking();
+                        this.addMessage('system', `❌ ${data.error || 'An error occurred'}`, new Date().toISOString());
+                        this.addProcessingStep('Error', 'error', data.error || 'An error occurred');
+                        break;
+                        
+                    case 'heartbeat':
+                        if (data.events_count > 10) {
+                            this.addSystemMessage(`⏳ Still processing... (${data.events_count} events)`);
+                        }
+                        break;
+                        
+                    case 'end':
+                        this.addSystemMessage(`✅ Stream completed successfully`);
+                        this.closeStream();
+                        break;
+                        
+                    case 'message':
+                    default:
+                        if (data.message) {
+                            this.addSystemMessage(data.message);
+                        }
+                        console.log('Unknown event type:', eventType, data);
+                }
+            }
+
+            handleDocumentAttachment(documentAttachment, costEstimate = null) {
+                console.log('📄 Document attachment received:', documentAttachment);
+                
+                // Extract quality level from cost estimate if available
+                let qualityLevel = null;
+                if (costEstimate && costEstimate.selected_quality_level) {
+                    qualityLevel = costEstimate.selected_quality_level;
+                } else if (costEstimate && costEstimate.multi_quality_data) {
+                    // Try to extract from multi-quality data
+                    qualityLevel = costEstimate.multi_quality_data.selected_quality;
+                }
+                
+                // Add quality level to document data
+                const enhancedDoc = {
+                    ...documentAttachment,
+                    quality_level: qualityLevel
+                };
+                
+                this.addGeneratedDocument(enhancedDoc);
+                
+                // Add a message about the document
+                const docMessage = `📄 **Professional Report Generated**\n\n` +
+                    `**Filename:** ${documentAttachment.filename}\n` +
+                    `**Type:** ${documentAttachment.document_type || 'CAPEX Analysis Report'}\n` +
+                    `**Size:** ${this.formatFileSize(documentAttachment.size)}\n` +
+                    (qualityLevel ? `**Quality Level:** ${qualityLevel}\n` : '') +
+                    `**Generated:** ${this.formatDate(documentAttachment.generated_at)}\n\n` +
+                    `The document includes detailed cost breakdowns, component analysis, timelines, and professional recommendations. ` +
+                    `Click "View" to see more details or "Download" to get the complete document.`;
+                
+                this.addMessage('assistant', docMessage, new Date().toISOString());
+            }
+
+            // Message and UI helper methods with markdown support
+            addSystemMessage(content) {
+                this.addMessage('system', content, new Date().toISOString());
+            }
+
+            addMessage(role, content, timestamp, animate = true) {
+                const chatContainer = document.getElementById('chatContainer');
+                const messageDiv = document.createElement('div');
+                messageDiv.className = `mb-4 ${animate ? 'fade-in' : ''}`;
+
+                const isUser = role === 'user';
+                const isSystem = role === 'system';
+                
+                const roleColors = {
+                    user: 'bg-blue-500 text-white',
+                    assistant: 'bg-gray-200 text-gray-800',
+                    system: 'bg-yellow-100 text-yellow-800 border border-yellow-300'
+                };
+
+                const timeStr = new Date(timestamp).toLocaleTimeString();
+                
+                // Render content with markdown support for assistant messages
+                const renderedContent = (role === 'assistant') ? 
+                    this.renderMarkdown(content) : 
+                    this.escapeHtml(content);
+                
+                messageDiv.innerHTML = `
+                    <div class="flex ${isUser ? 'justify-end' : 'justify-start'}">
+                        <div class="max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${roleColors[role]} ${isSystem ? 'text-center' : ''}">
+                            ${isSystem ? '' : `<div class="text-xs opacity-75 mb-1">${role} • ${timeStr}</div>`}
+                            <div class="message-content ${role === 'assistant' ? 'markdown-content' : 'whitespace-pre-wrap'}">${renderedContent}</div>
+                        </div>
+                    </div>
+                `;
+
+                chatContainer.appendChild(messageDiv);
+                chatContainer.scrollTop = chatContainer.scrollHeight;
+            }
+
+            showThinking(step, content) {
+                const thinkingContainer = document.getElementById('thinkingContainer');
+                const thinkingContent = document.getElementById('thinkingContent');
+                
+                thinkingContainer.classList.remove('hidden');
+                thinkingContent.innerHTML += `<div class="text-blue-600">[${step}] ${content}</div>`;
+                thinkingContent.scrollTop = thinkingContent.scrollHeight;
+            }
+
+            hideThinking() {
+                const thinkingContainer = document.getElementById('thinkingContainer');
+                thinkingContainer.classList.add('hidden');
+                document.getElementById('thinkingContent').innerHTML = '';
+            }
+
+            addProcessingStep(step, status, message) {
+                const stepsContainer = document.getElementById('stepsContainer');
+                const stepsList = document.getElementById('stepsList');
+                
+                stepsContainer.classList.remove('hidden');
+                
+                const existingStep = Array.from(stepsList.children).find(
+                    child => child.dataset.step === step
+                );
+                
+                if (existingStep) {
+                    const statusIcon = existingStep.querySelector('.status-icon');
+                    const messageEl = existingStep.querySelector('.step-message');
+                    const timeEl = existingStep.querySelector('.step-time');
+                    
+                    const statusIcons = {
+                        'completed': '✅',
+                        'running': '⏳',
+                        'error': '❌',
+                        'waiting': '⏸️'
+                    };
+                    
+                    statusIcon.textContent = statusIcons[status] || '⏸️';
+                    messageEl.textContent = message;
+                    timeEl.textContent = new Date().toLocaleTimeString();
+                    
+                    existingStep.className = `flex items-center p-3 rounded border fade-in ${
+                        status === 'completed' ? 'bg-green-50 border-green-200' :
+                        status === 'running' ? 'bg-blue-50 border-blue-200' :
+                        status === 'error' ? 'bg-red-50 border-red-200' :
+                        'bg-white border-gray-200'
+                    }`;
+                } else {
+                    const stepDiv = document.createElement('div');
+                    stepDiv.dataset.step = step;
+                    stepDiv.className = `flex items-center p-3 rounded border fade-in ${
+                        status === 'completed' ? 'bg-green-50 border-green-200' :
+                        status === 'running' ? 'bg-blue-50 border-blue-200' :
+                        status === 'error' ? 'bg-red-50 border-red-200' :
+                        'bg-white border-gray-200'
+                    }`;
+                    
+                    const statusIcons = {
+                        'completed': '✅',
+                        'running': '⏳',
+                        'error': '❌',
+                        'waiting': '⏸️'
+                    };
+                    
+                    stepDiv.innerHTML = `
+                        <div class="status-icon flex-shrink-0 mr-3 text-lg">${statusIcons[status] || '⏸️'}</div>
+                        <div class="flex-1">
+                            <div class="font-medium text-gray-800">${step}</div>
+                            <div class="step-message text-sm text-gray-600">${message}</div>
+                        </div>
+                        <div class="step-time text-xs text-gray-400">${new Date().toLocaleTimeString()}</div>
+                    `;
+                    
+                    stepsList.appendChild(stepDiv);
+                }
+            }
+
+            showResults(data) {
+                const resultsContainer = document.getElementById('resultsContainer');
+                const resultsContent = document.getElementById('resultsContent');
+                
+                resultsContainer.classList.remove('hidden');
+                
+                let html = '';
+                
+                if (data.cost_estimate) {
+                    const estimate = data.cost_estimate;
+                    
+                    // Handle multi-quality display
+                    if (estimate.multi_quality_data && estimate.multi_quality_data.quality_costs) {
+                        html += this.generateMultiQualityResults(estimate);
+                    } else {
+                        html += this.generateSingleQualityResults(estimate);
+                    }
+                }
+                
+                if (data.requirements) {
+                    html += this.generateRequirementsDisplay(data.requirements);
+                }
+                
+                resultsContent.innerHTML = html;
+            }
+
+            generateMultiQualityResults(estimate) {
+                const multiData = estimate.multi_quality_data;
+                const qualityCosts = multiData.quality_costs;
+                
+                let html = `
+                    <div class="mb-8">
+                        <h4 class="font-semibold text-lg mb-4 text-blue-700">💰 Multi-Quality Cost Analysis</h4>
+                        <div class="grid md:grid-cols-3 gap-4 mb-6">
+                `;
+                
+                Object.entries(qualityCosts).forEach(([quality, data]) => {
+                    const isSelected = estimate.selected_quality_level === quality;
+                    const qualityClass = quality === 'Basic' ? 'border-yellow-300 bg-yellow-50' :
+                                       quality === 'Standard' ? 'border-blue-300 bg-blue-50' :
+                                       'border-purple-300 bg-purple-50';
+                    
+                    html += `
+                        <div class="border-2 rounded-lg p-4 ${qualityClass} ${isSelected ? 'ring-2 ring-blue-500' : ''}">
+                            <div class="text-center">
+                                <h5 class="font-semibold text-lg mb-2">${quality} Quality</h5>
+                                ${isSelected ? '<div class="text-xs bg-blue-500 text-white px-2 py-1 rounded mb-2">SELECTED</div>' : ''}
+                                <div class="text-2xl font-bold text-gray-800 mb-1">€${data.total_cost_eur?.toLocaleString() || 'N/A'}</div>
+                                <div class="text-sm text-gray-600">€${data.cost_per_sqm?.toFixed(2) || 'N/A'} per sqm</div>
+                                <div class="text-xs text-gray-500 mt-2">${data.component_breakdown?.length || 0} components</div>
+                            </div>
+                        </div>
+                    `;
+                });
+                
+                html += `
+                        </div>
+                        <div class="bg-blue-50 p-4 rounded-lg">
+                            <h5 class="font-semibold text-blue-800 mb-2">Project Details</h5>
+                            <div class="grid md:grid-cols-3 gap-4 text-sm">
+                                <div><strong>Project Area:</strong> ${multiData.project_area_sqm?.toLocaleString() || 'N/A'} sqm</div>
+                                <div><strong>Confidence Level:</strong> ${multiData.confidence_level || 'N/A'}</div>
+                                <div><strong>Generated:</strong> ${this.formatDate(multiData.calculation_timestamp)}</div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                return html;
+            }
+
+            generateSingleQualityResults(estimate) {
+                return `
+                    <div class="grid md:grid-cols-2 gap-6 mb-6">
+                        <div>
+                            <h4 class="font-semibold text-lg mb-2 text-green-700">💰 Cost Summary</h4>
+                            <div class="bg-green-50 p-4 rounded border">
+                                <div class="text-2xl font-bold text-green-800">€${estimate.total_cost_eur?.toLocaleString() || 'N/A'}</div>
+                                <div class="text-sm text-green-600">Total Estimated Cost</div>
+                                <div class="mt-2 text-sm">
+                                    <span class="font-medium">€${estimate.cost_per_sqm?.toFixed(2) || 'N/A'}</span> per sqm
+                                </div>
+                                <div class="mt-1 text-xs text-green-600">
+                                    Confidence: ${estimate.confidence_level || 'N/A'}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <h4 class="font-semibold text-lg mb-2 text-blue-700">🏗️ Component Breakdown</h4>
+                            <div class="space-y-2">
+                                ${estimate.component_breakdown ? 
+                                    estimate.component_breakdown.slice(0, 5).map(comp => `
+                                        <div class="flex justify-between items-center py-1 border-b border-gray-200">
+                                            <span class="text-sm text-gray-700">${comp.component_name}</span>
+                                            <span class="font-medium text-blue-600">€${comp.cost_eur?.toLocaleString()}</span>
+                                        </div>
+                                    `).join('') : 
+                                    '<div class="text-sm text-gray-500">No component data available</div>'
+                                }
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            generateRequirementsDisplay(requirements) {
+                return `
+                    <div class="mt-6">
+                        <h4 class="font-semibold text-lg mb-2 text-purple-700">📋 Project Requirements</h4>
+                        <div class="bg-purple-50 p-4 rounded border grid md:grid-cols-3 gap-4 text-sm">
+                            ${Object.entries(requirements).map(([key, value]) => {
+                                if (value && key !== 'last_updated' && typeof value !== 'object') {
+                                    return `<div><strong>${key.replace(/_/g, ' ')}:</strong> ${value}</div>`;
+                                }
+                                return '';
+                            }).filter(Boolean).join('')}
+                        </div>
+                    </div>
+                `;
+            }
+
+            closeStream() {
+                if (this.eventSource) {
+                    this.eventSource.close();
+                    this.eventSource = null;
+                    this.updateConnectionStatus(false, 'Stream closed');
+                }
+            }
+
+            testStreaming() {
+                this.addSystemMessage("🧪 Testing SSE streaming connection...");
+                this.closeStream();
+                
+                const testUrl = `${this.backendUrl}/stream/test`;
+                console.log(`Testing stream: ${testUrl}`);
+                
+                this.eventSource = new EventSource(testUrl);
+                
+                this.eventSource.addEventListener('test', (event) => {
+                    const data = JSON.parse(event.data);
+                    this.addSystemMessage(`📡 Test event ${data.count}: ${data.message}`);
+                });
+                
+                this.eventSource.addEventListener('end', (event) => {
+                    const data = JSON.parse(event.data);
+                    this.addSystemMessage(`✅ Stream test completed: ${data.status}`);
+                    this.closeStream();
+                });
+                
+                this.eventSource.onerror = (error) => {
+                    this.addSystemMessage(`❌ Stream test failed: ${error.message || 'Connection error'}`);
+                    this.closeStream();
+                };
+            }
+
+            async sendRegularMessage(message, fieldValues = null) {
+                try {
+                    const requestData = {
+                        message: message,
+                        user_id: this.userId,
+                        thread_id: this.currentThreadId,
+                        stream: false
+                    };
+                    
+                    if (fieldValues) {
+                        requestData.field_values = fieldValues;
+                        requestData.form_submitted = true;
+                    }
+                    
+                    if (this.collectionStage) {
+                        requestData.collection_stage = this.collectionStage;
+                    }
+
+                    const response = await fetch(`${this.backendUrl}${BACKEND_CONFIG.ENDPOINTS.CHAT}`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify(requestData)
+                    });
+
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    }
+
+                    const data = await response.json();
+                    
+                    // Add assistant response with markdown support
+                    this.addMessage('assistant', data.response, new Date().toISOString());
+                    
+                    // Handle dynamic form fields
+                    if (data.suggested_form_fields && data.suggested_form_fields.length > 0) {
+                        this.showDynamicForm(data.suggested_form_fields, data.collection_stage);
+                    }
+                    
+                    // Handle document attachments
+                    if (data.cost_estimate && data.cost_estimate.document_attachment) {
+                        this.handleDocumentAttachment(data.cost_estimate.document_attachment, data.cost_estimate);
+                    }
+                    
+                    // Show results if available
+                    if (data.cost_estimate || data.requirements) {
+                        this.showResults(data);
+                    }
+
+                } catch (error) {
+                    throw new Error(`Request failed: ${error.message}`);
+                }
+            }
+        }
+
+        // Helper function to fill message input
+        function fillMessage(message) {
+            document.getElementById('messageInput').value = message;
+        }
+
+        // Initialize the enhanced interface
+        const dynamicCAPEX = new EnhancedCAPEXInterface();
+        
+        // Test connection on load
+        window.addEventListener('load', () => {
+            setTimeout(() => dynamicCAPEX.testConnection(), 1000);
+        });
+        
+        // Cleanup on page unload
+        window.addEventListener('beforeunload', () => {
+            dynamicCAPEX.closeStream();
+        });
+    </script>
+</body>
+</html>
