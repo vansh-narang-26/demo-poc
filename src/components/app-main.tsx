@@ -144,6 +144,8 @@ export default function AppMain() {
     formPayload,
   } = useChat();
 
+  const [removedBubbles, setRemovedBubbles] = useState(new Set());
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [showScrollButton, setShowScrollButton] = useState(false);
   const chatContainerRef = useRef<HTMLDivElement>(null);
@@ -182,58 +184,54 @@ export default function AppMain() {
     }
   }, [suggestedQuestions]);
 
+  //add
+  useEffect(() => {
+    setRemovedBubbles(new Set());
+  }, [messages.filter((m) => m.role === "user").length]);
+
+  const latestUserMessageIndex = [...messages]
+    .reverse()
+    .findIndex((m) => m.role === "user");
+  const latestUserMessageActualIndex =
+    latestUserMessageIndex !== -1
+      ? messages.length - 1 - latestUserMessageIndex
+      : -1;
   const processingSteps = messages.filter(
-    (m) =>
+    (m, index) =>
       m.role === "assistant" &&
       typeof m.content === "string" &&
       (m.content.includes("⌛ Initialization") ||
         m.content.includes("🤖 Analyzing") ||
         m.content.includes("Analysis completed") ||
-        m.content === "skeleton")
+        m.content === "skeleton") &&
+      !removedBubbles.has(m.id) &&
+      // Only show steps after the latest user message
+      (latestUserMessageActualIndex !== -1
+        ? index > latestUserMessageActualIndex
+        : true)
   );
 
   //Added
   useEffect(() => {
-    messages.forEach((message) => {
+    const timers: NodeJS.Timeout[] = [];
+
+    processingSteps.forEach((msg) => {
       if (
-        message.role === "assistant" &&
-        typeof message.content === "string" &&
-        !message.content.includes("⌛") &&
-        !message.content.includes("🤖") &&
-        message.content !== "skeleton"
+        typeof msg.content === "string" &&
+        msg.content.includes("completed")
       ) {
-        console.log("📥 ReactMarkdown message:", message);
+        const timer = setTimeout(() => {
+          setRemovedBubbles((prev) => new Set([...prev, msg.id]));
+        }, 2000); // Show green state for 2 seconds before removing
 
-        // Log document attachment if it exists
-        if (message.documentAttachment) {
-          console.log("📄 Document Attachment Found:");
-          console.log("- Filename:", message.documentAttachment.filename);
-          console.log(
-            "- Content (first 100 chars):",
-            message.documentAttachment.content.substring(0, 100)
-          );
-          console.log(
-            "- Content length:",
-            message.documentAttachment.content.length
-          );
-          console.log("- Full content:", message.documentAttachment.content);
-
-          // Try to decode and log some info about the document
-          try {
-            const byteCharacters = atob(message.documentAttachment.content);
-            console.log("- Decoded size:", byteCharacters.length, "bytes");
-            console.log(
-              "- First 50 decoded chars:",
-              byteCharacters.substring(0, 50)
-            );
-          } catch (error) {
-            console.error("- Error decoding base64:", error);
-          }
-        }
+        timers.push(timer);
       }
     });
-  }, [messages]);
 
+    return () => {
+      timers.forEach((timer) => clearTimeout(timer));
+    };
+  }, [processingSteps.map((m) => m.id).join(",")]);
   return (
     <div className="flex flex-col h-full w-full">
       {hasStartedConversation ? (
@@ -261,40 +259,44 @@ export default function AppMain() {
                       </div>
                     )}
 
-                    {message.role === "user" && (
-                      <div className="mt-[30px]">
-                        {processingSteps.map((msg) => {
-                          const content =
-                            typeof msg.content === "string" ? msg.content : "";
-                          const title = content.includes("⌛")
-                            ? "Initialization"
-                            : content.includes("🤖")
-                            ? "Orchestrator"
-                            : content.includes("completed")
-                            ? "Final Result"
-                            : "Processing";
-                          const type = content.includes("completed")
-                            ? "success"
-                            : "info";
+                    {message.role === "user" &&
+                      latestUserMessageActualIndex ===
+                        messages.indexOf(message) && (
+                        <div className="mt-[30px]">
+                          {processingSteps.map((msg) => {
+                            const content =
+                              typeof msg.content === "string"
+                                ? msg.content
+                                : "";
+                            const title = content.includes("⌛")
+                              ? "Initialization"
+                              : content.includes("🤖")
+                              ? "Orchestrator"
+                              : content.includes("completed")
+                              ? "Final Result"
+                              : "Processing";
+                            const type = content.includes("completed")
+                              ? "success"
+                              : "info";
 
-                          return msg.content === "skeleton" ? (
-                            <SkeletonBubble key={msg.id} />
-                          ) : (
-                            <StepBubble
-                              key={msg.id}
-                              title={title}
-                              description={content}
-                              time={msg.timestamp.toLocaleTimeString([], {
-                                hour: "2-digit",
-                                minute: "2-digit",
-                                second: "2-digit",
-                              })}
-                              type={type}
-                            />
-                          );
-                        })}
-                      </div>
-                    )}
+                            return msg.content === "skeleton" ? (
+                              <SkeletonBubble key={msg.id} />
+                            ) : (
+                              <StepBubble
+                                key={msg.id}
+                                title={title}
+                                description={content}
+                                time={msg.timestamp.toLocaleTimeString([], {
+                                  hour: "2-digit",
+                                  minute: "2-digit",
+                                  second: "2-digit",
+                                })}
+                                type={type}
+                              />
+                            );
+                          })}
+                        </div>
+                      )}
 
                     {message.role === "assistant" && parsedDoc ? (
                       <div className="flex w-full justify-start">
@@ -415,7 +417,7 @@ export default function AppMain() {
                             <>
                               <div className="mt-4">
                                 <button
-                                  className="text-sm bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md transition"
+                                  className="text-sm bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md transition cursor-pointer"
                                   onClick={() => {
                                     if (!message.documentAttachment) return;
 
@@ -463,12 +465,10 @@ export default function AppMain() {
                 );
               })}
               {isLoading && <SkeletonBubble />}
+              {formPayload && <FormRenderer form={formPayload} />}
               <div ref={messagesEndRef} />
             </div>
           </div>
-
-          {/* {formPayload && <div className="max-w-2xl mx-auto">FormRenderer</div>} */}
-          {formPayload && <FormRenderer form={formPayload} />}
 
           <div className="w-full max-w-2xl mx-auto py-2 relative">
             {showScrollButton && (
