@@ -56,6 +56,7 @@ export interface Message {
   timestamp: Date;
   cost_estimate?: CostEstimate;
   documentAttachment?: DocumentAttachment;
+  isThinking?: boolean; // Flag to identify thinking messages
 }
 
 interface ChatState {
@@ -67,6 +68,8 @@ interface ChatState {
   abortController: AbortController | null;
   suggestedQuestions: string[];
   formPayload: any;
+  thinkingMessageId: string | null;
+  thinkingContent: string; // Add this to accumulate thinking content
 
   addMessage: (
     content: string | Blob,
@@ -75,8 +78,13 @@ interface ChatState {
     mediaUrl?: string,
     transcript?: string,
     documentAttachment?: DocumentAttachment,
-    costEstimate?: CostEstimate
+    costEstimate?: CostEstimate,
+    isThinking?: boolean
   ) => void;
+
+  updateThinkingMessage: (content: string) => void;
+  appendToThinkingMessage: (token: string) => void; // Add this for streaming
+  finalizeThinkingMessage: () => void; // Mark thinking as complete
 
   sendMessage: (
     content: string | Blob,
@@ -102,6 +110,8 @@ export const useChat = create<ChatState>((set, get) => ({
   abortController: null,
   suggestedQuestions: [],
   formPayload: null,
+  thinkingMessageId: null,
+  thinkingContent: "", // Initialize thinking content
 
   addMessage: (
     content,
@@ -110,7 +120,8 @@ export const useChat = create<ChatState>((set, get) => ({
     mediaUrl,
     transcript,
     documentAttachment,
-    costEstimate
+    costEstimate,
+    isThinking = false
   ) => {
     const message: Message = {
       id: uuidv4(),
@@ -122,9 +133,14 @@ export const useChat = create<ChatState>((set, get) => ({
       transcript,
       documentAttachment,
       cost_estimate: costEstimate,
+      isThinking,
     };
     const newMessages = [...get().messages, message];
     set({ messages: newMessages, hasStartedConversation: true });
+
+    if (isThinking) {
+      set({ thinkingMessageId: message.id, thinkingContent: "" });
+    }
 
     const { sessionId, createdAt } = get();
     const stored = sessionStorage.getItem(SESSION_STORAGE_KEY);
@@ -132,6 +148,53 @@ export const useChat = create<ChatState>((set, get) => ({
     sessions[sessionId] = { id: sessionId, createdAt, messages: newMessages };
     sessionStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(sessions));
     window.dispatchEvent(new Event("chatHistoryUpdated"));
+  },
+
+  updateThinkingMessage: (content: string) => {
+    const { thinkingMessageId } = get();
+    if (thinkingMessageId) {
+      set((state) => ({
+        messages: state.messages.map((msg) =>
+          msg.id === thinkingMessageId ? { ...msg, content } : msg
+        ),
+        thinkingContent: content,
+      }));
+    }
+  },
+
+  // Method for streaming thinking content
+  appendToThinkingMessage: (token: string) => {
+    const { thinkingMessageId, thinkingContent } = get();
+    if (thinkingMessageId) {
+      const newContent = thinkingContent + token;
+      set((state) => ({
+        messages: state.messages.map((msg) =>
+          msg.id === thinkingMessageId
+            ? { ...msg, content: `**Thinking** — ${newContent}` }
+            : msg
+        ),
+        thinkingContent: newContent,
+      }));
+    }
+  },
+
+  // Mark thinking as complete but keep the message
+  finalizeThinkingMessage: () => {
+    const { thinkingMessageId, thinkingContent } = get();
+    if (thinkingMessageId) {
+      set((state) => ({
+        messages: state.messages.map((msg) =>
+          msg.id === thinkingMessageId
+            ? {
+                ...msg,
+                content: `**Thinking Complete** — ${thinkingContent}`,
+              }
+            : msg
+        ),
+        thinkingMessageId: null,
+        thinkingContent: "",
+      }));
+    }
   },
 
   sendMessage: async (
@@ -153,9 +216,11 @@ export const useChat = create<ChatState>((set, get) => ({
     } else if (mediaType === "text" && typeof content === "string") {
       addMessage(content, "user", mediaType);
     }
-    //https://generali-backend.stage.neuralcompany.team/
 
-    const streamUrl = `https://generali-backend.stage.neuralcompany.team/chat/stream?message=${encodeURIComponent(
+    const API_BASE_URL =
+      process.env.NEXT_PUBLIC_API_BASE_URL ||
+      "https://generali-backend.stage.neuralcompany.team";
+    const streamUrl = `${API_BASE_URL}/chat/stream?message=${encodeURIComponent(
       typeof content === "string" ? content : transcript || ""
     )}&user_id=${encodeURIComponent(userEmail)}&thread_id=${sessionId}`;
 
@@ -195,20 +260,31 @@ export const useChat = create<ChatState>((set, get) => ({
       );
     };
 
-    eventSource.addEventListener("thinking", () => {
-      const exists = get().messages.find(
-        (m) =>
-          m.role === "assistant" &&
-          typeof m.content === "string" &&
-          m.content === "Analyzing your query..."
-      );
-      if (!exists) {
-        addMessage("Analyzing your query...", "assistant", "text");
+    eventSource.addEventListener("thinking", (e) => {
+      const data = JSON.parse(e.data);
+      const token = data.token || "";
+
+      // If no thinking message exists, create one
+      if (!get().thinkingMessageId) {
+        addMessage(
+          `**Thinking** — ${token}`,
+          "assistant",
+          "text",
+          undefined,
+          undefined,
+          undefined,
+          undefined,
+          true
+        );
+      } else {
+        // Append the new token to the existing thinking message
+        get().appendToThinkingMessage(token);
       }
     });
 
     eventSource.addEventListener("start", (e) => {
       const data = JSON.parse(e.data);
+      get().finalizeThinkingMessage();
       const currentMessages = removeInitAndFinalBlocks();
       currentMessages.push({
         id: uuidv4(),
@@ -315,6 +391,8 @@ export const useChat = create<ChatState>((set, get) => ({
       createdAt: new Date().toISOString(),
       suggestedQuestions: [],
       formPayload: null,
+      thinkingMessageId: null,
+      thinkingContent: "",
     }),
 
   cancelOngoingRequest: () => {
@@ -335,6 +413,8 @@ export const useChat = create<ChatState>((set, get) => ({
         createdAt: session.createdAt,
         suggestedQuestions: [],
         formPayload: null,
+        thinkingMessageId: null,
+        thinkingContent: "",
       });
     }
   },
@@ -347,6 +427,8 @@ export const useChat = create<ChatState>((set, get) => ({
       createdAt: new Date().toISOString(),
       suggestedQuestions: [],
       formPayload: null,
+      thinkingMessageId: null,
+      thinkingContent: "",
     });
   },
 }));

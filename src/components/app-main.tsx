@@ -1,6 +1,7 @@
 "use client";
 
 import { cn } from "@/lib/utils";
+import { Download } from "lucide-react";
 import ChatInput from "./chat-input/chat-input";
 import { useChat } from "@/store/useChat";
 import { useEffect, useRef, useState } from "react";
@@ -30,7 +31,7 @@ const StepBubble = ({
     >
       <div className="flex justify-between items-start">
         <div>
-          <p className="font-semibold flex items-center gap-2">
+          <p className="font-semibold flex items-center gap-2 dark:text-black">
             {type === "success" ? "✅" : "⏳"} {title}
           </p>
           <p className="text-sm text-gray-700 mt-1">{description}</p>
@@ -41,11 +42,15 @@ const StepBubble = ({
   );
 };
 
+const isThinkingMessage = (content: string) =>
+  content.startsWith("**Thinking**") ||
+  content.startsWith("**Thinking Complete**");
+
 const SkeletonBubble = () => (
   <div className="w-full max-w-4xl mx-auto">
-    <div className="rounded-xl border px-4 py-3 mb-2 bg-gray-100 animate-pulse">
-      <div className="h-4 bg-gray-300 rounded w-1/2 mb-2"></div>
-      <div className="h-4 bg-gray-300 rounded w-2/3"></div>
+    <div className="rounded-xl border px-4 py-3 mb-2 bg-gray-100 animate-pulse dark:bg-neutral-800 border-gray-200 dark:border-neutral-700">
+      <div className="h-4 bg-gray-300 rounded w-1/2 mb-2 dark:bg-neutral-700"></div>
+      <div className="h-4 bg-gray-300 rounded w-2/3 dark:bg-neutral-700"></div>
     </div>
   </div>
 );
@@ -145,6 +150,55 @@ export default function AppMain() {
   } = useChat();
 
   const [removedBubbles, setRemovedBubbles] = useState(new Set());
+  const [collapsedMessages, setCollapsedMessages] = useState<Set<string>>(
+    new Set()
+  );
+
+  // Auto-collapse completed thinking messages
+  useEffect(() => {
+    // Find all thinking messages
+    const thinkingMessages = messages.filter(
+      (m) =>
+        m.role === "assistant" &&
+        typeof m.content === "string" &&
+        isThinkingMessage(m.content)
+    );
+    // Find the last thinking message
+    const lastThinking =
+      thinkingMessages.length > 0
+        ? thinkingMessages[thinkingMessages.length - 1]
+        : null;
+    // Find the index of the last thinking message
+    const lastThinkingIndex = lastThinking
+      ? messages.findIndex((m) => m.id === lastThinking.id)
+      : -1;
+    // If there is a new assistant message after the last thinking message, collapse it
+    if (lastThinking && lastThinkingIndex !== -1) {
+      const hasCompleted = messages
+        .slice(lastThinkingIndex + 1)
+        .some(
+          (m) =>
+            m.role === "assistant" &&
+            typeof m.content === "string" &&
+            !isThinkingMessage(m.content)
+        );
+      if (hasCompleted && !collapsedMessages.has(lastThinking.id)) {
+        setCollapsedMessages((prev) => new Set([...prev, lastThinking.id]));
+      }
+    }
+  }, [messages]);
+
+  const toggleMessageCollapse = (messageId: string) => {
+    setCollapsedMessages((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(messageId)) {
+        newSet.delete(messageId);
+      } else {
+        newSet.add(messageId);
+      }
+      return newSet;
+    });
+  };
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [showScrollButton, setShowScrollButton] = useState(false);
@@ -222,7 +276,7 @@ export default function AppMain() {
       ) {
         const timer = setTimeout(() => {
           setRemovedBubbles((prev) => new Set([...prev, msg.id]));
-        }, 2000); // Show green state for 2 seconds before removing
+        }, 4000); // Show green state for 4 seconds before removing
 
         timers.push(timer);
       }
@@ -232,6 +286,7 @@ export default function AppMain() {
       timers.forEach((timer) => clearTimeout(timer));
     };
   }, [processingSteps.map((m) => m.id).join(",")]);
+
   return (
     <div className="flex flex-col h-full w-full">
       {hasStartedConversation ? (
@@ -240,63 +295,57 @@ export default function AppMain() {
             ref={chatContainerRef}
             className="flex-1 overflow-y-auto min-h-0 pb-4"
           >
-            <div className="flex flex-col gap-4 w-full max-w-4xl mx-auto pt-4">
-              {messages.map((message) => {
+            <div className="flex flex-col gap-2 w-full max-w-4xl mx-auto pt-4">
+              {messages.map((message, index) => {
                 const parsedDoc =
                   typeof message.content === "string"
                     ? extractDocumentInfo(message.content)
                     : null;
 
+                // Show StepBubble for initialization/processing steps
+                if (
+                  message.role === "assistant" &&
+                  typeof message.content === "string" &&
+                  (message.content.includes("⌛ Initialization") ||
+                    message.content.includes("🤖 Analyzing") ||
+                    message.content.includes("Analysis completed") ||
+                    message.content === "skeleton") &&
+                  !removedBubbles.has(message.id)
+                ) {
+                  return (
+                    <StepBubble
+                      key={message.id}
+                      title={
+                        message.content.includes("⌛ Initialization")
+                          ? "Initialization"
+                          : message.content.includes("🤖 Analyzing")
+                          ? "Analyzing"
+                          : message.content.includes("Analysis completed")
+                          ? "Analysis completed"
+                          : "Processing..."
+                      }
+                      description={message.content}
+                      time={new Date().toLocaleTimeString()}
+                      type={
+                        message.content.includes("Analysis completed")
+                          ? "success"
+                          : "info"
+                      }
+                    />
+                  );
+                }
+
                 return (
                   <div key={message.id}>
                     {message.role === "user" && (
                       <div className="flex w-full justify-end">
-                        <div className="bg-gray-100 dark:bg-neutral-700 ml-auto max-w-[80%] rounded-2xl py-2 px-4 text-base">
+                        <div className="bg-gray-100 dark:bg-neutral-700 ml-auto max-w-[80%] rounded-2xl py-2 px-4 text-base mb-2">
                           {typeof message.content === "string"
                             ? message.content
                             : ""}
                         </div>
                       </div>
                     )}
-
-                    {message.role === "user" &&
-                      latestUserMessageActualIndex ===
-                        messages.indexOf(message) && (
-                        <div className="mt-[30px]">
-                          {processingSteps.map((msg) => {
-                            const content =
-                              typeof msg.content === "string"
-                                ? msg.content
-                                : "";
-                            const title = content.includes("⌛")
-                              ? "Initialization"
-                              : content.includes("🤖")
-                              ? "Orchestrator"
-                              : content.includes("completed")
-                              ? "Final Result"
-                              : "Processing";
-                            const type = content.includes("completed")
-                              ? "success"
-                              : "info";
-
-                            return msg.content === "skeleton" ? (
-                              <SkeletonBubble key={msg.id} />
-                            ) : (
-                              <StepBubble
-                                key={msg.id}
-                                title={title}
-                                description={content}
-                                time={msg.timestamp.toLocaleTimeString([], {
-                                  hour: "2-digit",
-                                  minute: "2-digit",
-                                  second: "2-digit",
-                                })}
-                                type={type}
-                              />
-                            );
-                          })}
-                        </div>
-                      )}
 
                     {message.role === "assistant" && parsedDoc ? (
                       <div className="flex w-full justify-start">
@@ -375,88 +424,240 @@ export default function AppMain() {
                       !message.content.includes("🤖") &&
                       message.content !== "skeleton" ? (
                       <div className="flex w-full justify-start">
-                        <div className="prose dark:prose-invert max-w-none bg-white dark:bg-neutral-900 px-4 py-3 rounded-2xl">
-                          <ReactMarkdown
-                            remarkPlugins={[remarkGfm]}
-                            components={{
-                              table: ({ node, ...props }) => (
-                                <table
-                                  className="w-full table-auto border-collapse border border-gray-300 dark:border-neutral-700 mb-5 mt-5"
-                                  {...props}
-                                />
-                              ),
-                              thead: ({ node, ...props }) => (
-                                <thead
-                                  className="bg-gray-100 dark:bg-neutral-800"
-                                  {...props}
-                                />
-                              ),
-                              tr: ({ node, ...props }) => (
-                                <tr
-                                  className="border-b border-gray-300 dark:border-neutral-700"
-                                  {...props}
-                                />
-                              ),
-                              th: ({ node, ...props }) => (
-                                <th
-                                  className="px-4 py-2 text-left font-semibold border border-gray-300 dark:border-neutral-700"
-                                  {...props}
-                                />
-                              ),
-                              td: ({ node, ...props }) => (
-                                <td
-                                  className="px-4 py-2 border border-gray-300 dark:border-neutral-700"
-                                  {...props}
-                                />
-                              ),
-                            }}
-                          >
-                            {message.content}
-                          </ReactMarkdown>
-                          {message.documentAttachment && (
-                            <>
-                              <div className="mt-4">
-                                <button
-                                  className="text-sm bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md transition cursor-pointer"
-                                  onClick={() => {
-                                    if (!message.documentAttachment) return;
-
-                                    const byteCharacters = atob(
-                                      message.documentAttachment.content
-                                    );
-                                    const byteNumbers = new Array(
-                                      byteCharacters.length
-                                    );
-                                    for (
-                                      let i = 0;
-                                      i < byteCharacters.length;
-                                      i++
-                                    ) {
-                                      byteNumbers[i] =
-                                        byteCharacters.charCodeAt(i);
-                                    }
-                                    const byteArray = new Uint8Array(
-                                      byteNumbers
-                                    );
-                                    const blob = new Blob([byteArray], {
-                                      type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-                                    });
-                                    const url = URL.createObjectURL(blob);
-                                    const link = document.createElement("a");
-                                    link.href = url;
-                                    link.download =
-                                      message.documentAttachment.filename;
-                                    document.body.appendChild(link);
-                                    link.click();
-                                    document.body.removeChild(link);
-                                    URL.revokeObjectURL(url);
-                                  }}
-                                >
-                                  ⬇️ Download{" "}
-                                  {message.documentAttachment.filename}
-                                </button>
+                        <div
+                          className={`prose dark:prose-invert max-w-none px-4 py-3 rounded-2xl w-full
+                            ${
+                              message.documentAttachment
+                                ? "bg-gray-50 dark:bg-neutral-800 border border-gray-400 dark:border-neutral-700 shadow-md py-6 px-8"
+                                : isThinkingMessage(message.content)
+                                ? "bg-gray-50 dark:bg-neutral-800 border border-gray-400 dark:border-neutral-700 px-8 py-8 flex flex-col gap-5"
+                                : "bg-white dark:bg-neutral-900"
+                            }
+                          `}
+                        >
+                          {isThinkingMessage(message.content) ? (
+                            <div className="w-full relative">
+                              <button
+                                onClick={() =>
+                                  toggleMessageCollapse(message.id)
+                                }
+                                className="absolute top-2 right-2 flex items-center gap-2 text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-gray-100 bg-transparent px-2 py-1 z-10"
+                                style={{ outline: "none" }}
+                              >
+                                <span>
+                                  {collapsedMessages.has(message.id) ? (
+                                    <svg
+                                      xmlns="http://www.w3.org/2000/svg"
+                                      width="24"
+                                      height="24"
+                                      viewBox="0 0 24 24"
+                                      fill="none"
+                                      stroke="currentColor"
+                                      className="lucide lucide-chevron-down-icon lucide-chevron-down"
+                                    >
+                                      <path d="m6 9 6 6 6-6" />
+                                    </svg>
+                                  ) : (
+                                    <svg
+                                      xmlns="http://www.w3.org/2000/svg"
+                                      width="24"
+                                      height="24"
+                                      viewBox="0 0 24 24"
+                                      fill="none"
+                                      stroke="currentColor"
+                                      className="lucide lucide-chevron-up-icon lucide-chevron-up"
+                                    >
+                                      <path d="m18 15-6-6-6 6" />
+                                    </svg>
+                                  )}
+                                </span>
+                                <span className="sr-only">
+                                  Toggle Thinking Process
+                                </span>
+                              </button>
+                              <div>
+                                {collapsedMessages.has(message.id) ? (
+                                  <div className="mt-2 text-gray-500 dark:text-gray-400 pr-10">
+                                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                                      {message.content
+                                        .split("\n")[0]
+                                        .slice(0, 120) +
+                                        (message.content.length > 120
+                                          ? "..."
+                                          : "")}
+                                    </ReactMarkdown>
+                                  </div>
+                                ) : (
+                                  <div className="mt-2 pr-10">
+                                    <ReactMarkdown
+                                      remarkPlugins={[remarkGfm]}
+                                      components={{
+                                        table: ({ node, ...props }) => (
+                                          <table
+                                            className="w-full table-auto border-collapse border border-gray-300 dark:border-neutral-700 mb-5 mt-5"
+                                            {...props}
+                                          />
+                                        ),
+                                        thead: ({ node, ...props }) => (
+                                          <thead
+                                            className="bg-gray-100 dark:bg-neutral-800"
+                                            {...props}
+                                          />
+                                        ),
+                                        tr: ({ node, ...props }) => (
+                                          <tr
+                                            className="border-b border-gray-300 dark:border-neutral-700"
+                                            {...props}
+                                          />
+                                        ),
+                                        th: ({ node, ...props }) => (
+                                          <th
+                                            className="px-4 py-2 text-left font-semibold border border-gray-300 dark:border-neutral-700"
+                                            {...props}
+                                          />
+                                        ),
+                                        td: ({ node, ...props }) => (
+                                          <td
+                                            className="px-4 py-2 border border-gray-300 dark:border-neutral-700"
+                                            {...props}
+                                          />
+                                        ),
+                                        ul: ({ node, ...props }) => (
+                                          <ul
+                                            className="list-disc list-inside ml-5 mb-4"
+                                            {...props}
+                                          />
+                                        ),
+                                        li: ({ node, ...props }) => (
+                                          <li className="mb-1" {...props} />
+                                        ),
+                                        h3: ({ node, ...props }) => (
+                                          <h3
+                                            className="font-medium mt-2 mb-2"
+                                            {...props}
+                                          />
+                                        ),
+                                        h2: ({ node, ...props }) => (
+                                          <h2
+                                            className="text-lg font-semibold mt-2 mb-2"
+                                            {...props}
+                                          />
+                                        ),
+                                      }}
+                                    >
+                                      {message.content}
+                                    </ReactMarkdown>
+                                  </div>
+                                )}
                               </div>
-                            </>
+                            </div>
+                          ) : (
+                            <ReactMarkdown
+                              remarkPlugins={[remarkGfm]}
+                              components={{
+                                table: ({ node, ...props }) => (
+                                  <table
+                                    className="w-full table-auto border-collapse border border-gray-300 dark:border-neutral-700 mb-5 mt-5"
+                                    {...props}
+                                  />
+                                ),
+                                thead: ({ node, ...props }) => (
+                                  <thead
+                                    className="bg-gray-100 dark:bg-neutral-800"
+                                    {...props}
+                                  />
+                                ),
+                                tr: ({ node, ...props }) => (
+                                  <tr
+                                    className="border-b border-gray-300 dark:border-neutral-700"
+                                    {...props}
+                                  />
+                                ),
+                                th: ({ node, ...props }) => (
+                                  <th
+                                    className="px-4 py-2 text-left font-semibold border border-gray-300 dark:border-neutral-700"
+                                    {...props}
+                                  />
+                                ),
+                                td: ({ node, ...props }) => (
+                                  <td
+                                    className="px-4 py-2 border border-gray-300 dark:border-neutral-700"
+                                    {...props}
+                                  />
+                                ),
+                                ul: ({ node, ...props }) => (
+                                  <ul
+                                    className="list-disc list-inside ml-5 mb-4"
+                                    {...props}
+                                  />
+                                ),
+                                li: ({ node, ...props }) => (
+                                  <li className="mb-1" {...props} />
+                                ),
+                                h3: ({ node, ...props }) => (
+                                  <h3
+                                    className="font-medium mt-2 mb-2"
+                                    {...props}
+                                  />
+                                ),
+                                h2: ({ node, ...props }) => (
+                                  <h2
+                                    className="text-lg font-semibold mt-2 mb-2"
+                                    {...props}
+                                  />
+                                ),
+                              }}
+                            >
+                              {message.content}
+                            </ReactMarkdown>
+                          )}
+                          {message.documentAttachment && (
+                            <div className="w-full mt-4">
+                              <button
+                                className="group relative flex items-center gap-2 text-sm font-medium bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-5 py-2.5 rounded-sm shadow-md transition-all duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-300 cursor-pointer"
+                                aria-label={`Download ${message.documentAttachment.filename}`}
+                                onClick={() => {
+                                  if (!message.documentAttachment) return;
+
+                                  const byteCharacters = atob(
+                                    message.documentAttachment.content
+                                  );
+                                  const byteNumbers = new Array(
+                                    byteCharacters.length
+                                  );
+                                  for (
+                                    let i = 0;
+                                    i < byteCharacters.length;
+                                    i++
+                                  ) {
+                                    byteNumbers[i] =
+                                      byteCharacters.charCodeAt(i);
+                                  }
+                                  const byteArray = new Uint8Array(byteNumbers);
+                                  const blob = new Blob([byteArray], {
+                                    type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                                  });
+                                  const url = URL.createObjectURL(blob);
+                                  const link = document.createElement("a");
+                                  link.href = url;
+                                  link.download =
+                                    message.documentAttachment.filename;
+                                  document.body.appendChild(link);
+                                  link.click();
+                                  document.body.removeChild(link);
+                                  URL.revokeObjectURL(url);
+                                }}
+                              >
+                                <Download className="w-4 h-4 group-hover:animate-bounce" />
+                                Download{" "}
+                                <span className="font-semibold">
+                                  {message.documentAttachment.filename}
+                                </span>
+                                <span className="ml-2 text-sm">
+                                  ({message.documentAttachment.size} KB)
+                                </span>
+                              </button>
+                            </div>
                           )}
                         </div>
                       </div>
